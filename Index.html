@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple To‑Do App</title>
+  <style>
+    :root {
+      --bg: #0f172a;          /* slate-900 */
+      --card: #111827cc;      /* gray-900/80 */
+      --muted: #94a3b8;       /* slate-400 */
+      --text: #e5e7eb;        /* gray-200 */
+      --accent: #22d3ee;      /* cyan-400 */
+      --accent-2: #10b981;    /* emerald-500 */
+      --danger: #ef4444;      /* red-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box }
+    html, body { height: 100% }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 20% -10%, #1f2937, transparent 60%),
+                  radial-gradient(800px 400px at 110% 10%, #0ea5e9, transparent 40%),
+                  var(--bg);
+    }
+    .app {
+      max-width: 880px;
+      margin: 40px auto;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: .3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #002022;
+      font-weight: 700;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+    }
+    .card {
+      background: linear-gradient(180deg, #111827, #0b1220);
+      border: 1px solid #1f2937;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .row { display: flex; gap: 10px; }
+    .inputs { padding: 16px; }
+    .inputs input[type="text"] {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #1f2937;
+      outline: none;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 16px;
+    }
+    .btn {
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 14px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #012025;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .06s ease, filter .2s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { filter: brightness(1.07) }
+    .btn:active { transform: translateY(1px) }
+
+    .toolbar {
+      padding: 12px 16px;
+      border-top: 1px solid #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: #0b1220e6;
+    }
+    .filters, .stats { display: flex; gap: 8px; align-items: center; }
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #0b1220;
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip[aria-pressed="true"] { color: var(--text); border-color: var(--accent); }
+
+    ul.list { list-style: none; margin: 0; padding: 0; }
+    li.item { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 14px 16px; border-top: 1px solid #0f172a; }
+    li.item:first-child { border-top: none }
+    .checkbox {
+      appearance: none;
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid #334155; display: grid; place-items: center; cursor: pointer; background: #0b1220;
+    }
+    .checkbox:checked { border-color: var(--accent-2); background: #05261f; }
+    .checkbox:checked::after { content: "✓"; font-weight: 900; }
+
+    .label { font-size: 16px; line-height: 1.3; }
+    .label[contenteditable="true"] { outline: 2px dashed #334155; outline-offset: 2px; border-radius: 6px; padding: 2px 4px; }
+    .label.completed { color: #64748b; text-decoration: line-through; }
+
+    .actions { display: flex; gap: 8px; }
+    .icon-btn { background: transparent; border: 1px solid #1f2937; color: var(--muted); padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+    .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    footer { margin-top: 18px; color: var(--muted); font-size: 13px; text-align: center; }
+    a { color: var(--accent); text-decoration: none }
+
+    @media (max-width: 520px) {
+      .title { font-size: 22px }
+      .actions .icon-btn span { display: none }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Simple To-Do App">
+    <header>
+      <div class="title">
+        ✅ Simple To‑Do
+        <span class="pill" id="today"></span>
+      </div>
+      <button class="btn" id="exportBtn" title="Export tasks to file">Export</button>
+    </header>
+
+    <section class="card" aria-labelledby="addTaskHeading">
+      <div class="inputs">
+        <h2 id="addTaskHeading" style="margin:0 0 10px 2px; font-size:14px; color:var(--muted);">Add a task</h2>
+        <div class="row">
+          <input id="taskInput" type="text" placeholder="What needs to be done? (Press Enter to add)" autocomplete="off" />
+          <button class="btn" id="addBtn">Add</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="filters" role="tablist" aria-label="Filter tasks">
+          <button class="chip" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" data-filter="active" aria-pressed="false">Active</button>
+          <button class="chip" data-filter="completed" aria-pressed="false">Completed</button>
+        </div>
+        <div class="stats">
+          <span id="count">0 items</span>
+          <button class="chip" id="clearCompleted">Clear completed</button>
+        </div>
+      </div>
+      <ul class="list" id="list" aria-live="polite"></ul>
+    </section>
+
+    <footer>
+      <p>Data is saved in your browser (localStorage). No backend required.</p>
+    </footer>
+  </div>
+
+  <template id="itemTemplate">
+    <li class="item">
+      <input class="checkbox" type="checkbox" aria-label="Toggle completed" />
+      <div class="label" contenteditable="false" spellcheck="false"></div>
+      <div class="actions">
+        <button class="icon-btn edit" title="Edit"><span>✏️ Edit</span></button>
+        <button class="icon-btn delete" title="Delete"><span>🗑️ Delete</span></button>
+      </div>
+    </li>
+  </template>
+
+  <script>
+    /** Simple To‑Do App with localStorage **/
+    const STORAGE_KEY = 'todos-v1';
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    const state = {
+      items: [],
+      filter: 'all',
+    };
+
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items)); }
+    function load() { try { state.items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { state.items = []; } }
+
+    function uid() { return Math.random().toString(36).slice(2,9); }
+
+    function addTask(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      state.items.push({ id: uid(), text: trimmed, done: false, createdAt: Date.now() });
+      save();
+      render();
+    }
+
+    function updateTask(id, patch) {
+      const t = state.items.find(i => i.id === id);
+      if (t) Object.assign(t, patch);
+      save();
+      render();
+    }
+
+    function deleteTask(id) {
+      state.items = state.items.filter(i => i.id !== id);
+      save();
+      render();
+    }
+
+    function clearCompleted() {
+      state.items = state.items.filter(i => !i.done);
+      save();
+      render();
+    }
+
+    function setFilter(f) {
+      state.filter = f;
+      $$('.filters .chip').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.filter === f)));
+      render();
+    }
+
+    function visibleItems() {
+      if (state.filter === 'active') return state.items.filter(i => !i.done);
+      if (state.filter === 'completed') return state.items.filter(i => i.done);
+      return state.items;
+    }
+
+    function render() {
+      const list = $('#list');
+      list.innerHTML = '';
+      const items = visibleItems().sort((a,b) => Number(a.done) - Number(b.done) || b.createdAt - a.createdAt);
+      const tpl = $('#itemTemplate');
+
+      items.forEach(item => {
+        const li = tpl.content.firstElementChild.cloneNode(true);
+        const cb = $('.checkbox', li);
+        const label = $('.label', li);
+        const editBtn = $('.edit', li);
+        const delBtn = $('.delete', li);
+
+        cb.checked = item.done;
+        label.textContent = item.text;
+        if (item.done) label.classList.add('completed');
+
+        cb.addEventListener('change', () => updateTask(item.id, { done: cb.checked }));
+
+        editBtn.addEventListener('click', () => {
+          const editing = label.getAttribute('contenteditable') === 'true';
+          if (!editing) {
+            label.setAttribute('contenteditable', 'true');
+            label.focus();
+            placeCaretAtEnd(label);
+            editBtn.innerHTML = '<span>💾 Save</span>';
+          } else {
+            label.setAttribute('contenteditable', 'false');
+            const newText = label.textContent.trim();
+            if (newText) updateTask(item.id, { text: newText });
+            else deleteTask(item.id);
+            editBtn.innerHTML = '<span>✏️ Edit</span>';
+          }
+        });
+
+        label.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); $('.edit', li).click(); }
+          if (e.key === 'Escape') { e.preventDefault(); label.textContent = item.text; label.setAttribute('contenteditable','false'); $('.edit', li).innerHTML = '<span>✏️ Edit</span>'; }
+        });
+
+        delBtn.addEventListener('click', () => deleteTask(item.id));
+
+        list.appendChild(li);
+      });
+
+      // stats
+      const activeCount = state.items.filter(i => !i.done).length;
+      $('#count').textContent = `${activeCount} ${activeCount === 1 ? 'item' : 'items'} left`;
+    }
+
+    function placeCaretAtEnd(el) {
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function exportTasks() {
+      const blob = new Blob([JSON.stringify(state.items, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'tasks.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+    }
+
+    // Wire up UI
+    document.addEventListener('DOMContentLoaded', () => {
+      // today badge
+      const today = new Date();
+      $('#today').textContent = today.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+      load();
+      render();
+
+      $('#addBtn').addEventListener('click', () => addTask($('#taskInput').value));
+      $('#taskInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { addTask(e.target.value); e.target.value = ''; }
+      });
+      $('#addBtn').addEventListener('click', () => { const inp = $('#taskInput'); if (inp.value.trim()) inp.value=''; });
+
+      $$('.filters .chip').forEach(btn => btn.addEventListener('click', () => setFilter(btn.dataset.filter)));
+      $('#clearCompleted').addEventListener('click', clearCompleted);
+      $('#exportBtn').addEventListener('click', exportTasks);
+    });
+  </script>
+</body>
+</html>
